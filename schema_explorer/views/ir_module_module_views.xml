@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- PLAN.md, section 9.1: "View schema" button on the module form. -->
+    <record id="module_form_view_schema_explorer" model="ir.ui.view">
+        <field name="name">ir.module.module.form.schema.explorer</field>
+        <field name="model">ir.module.module</field>
+        <field name="inherit_id" ref="base.module_form"/>
+        <field name="arch" type="xml">
+            <button name="button_uninstall_wizard" position="after">
+                <button name="action_open_schema_explorer"
+                        string="View Schema"
+                        type="object"
+                        class="btn btn-secondary me-1"
+                        invisible="state != 'installed'"
+                        groups="schema_explorer.group_schema_explorer_user"/>
+            </button>
+        </field>
+    </record>
+</odoo>

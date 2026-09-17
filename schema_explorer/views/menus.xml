@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_schema_explorer_root"
+              name="Schema Explorer"
+              web_icon="schema_explorer,static/description/icon.png"
+              groups="schema_explorer.group_schema_explorer_user"
+              sequence="95"/>
+
+    <menuitem id="menu_schema_explorer_open"
+              name="Explore a module"
+              parent="menu_schema_explorer_root"
+              action="action_schema_explorer"
+              sequence="10"/>
+</odoo>

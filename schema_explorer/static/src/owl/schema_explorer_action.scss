@@ -1,0 +1,239 @@
+.o_schema_explorer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    background: var(--o-view-background-color, #fff);
+
+    .se-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid var(--border-color, #dee2e6);
+        position: relative;
+        z-index: 5;
+    }
+
+    .se-module-picker {
+        position: relative;
+        min-width: 220px;
+        flex: 1 1 260px;
+    }
+
+    .se-module-chips {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .se-module-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .se-chip-remove {
+        color: inherit;
+        text-decoration: none;
+        font-weight: bold;
+        opacity: 0.8;
+
+        &:hover {
+            opacity: 1;
+        }
+    }
+
+    .se-module-search {
+        flex: 1 1 140px;
+        min-width: 120px;
+    }
+
+    .se-module-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        max-height: 240px;
+        overflow-y: auto;
+        z-index: 20;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    .se-canvas-search {
+        max-width: 180px;
+    }
+
+    .se-body {
+        flex: 1 1 auto;
+        display: flex;
+        min-height: 0;
+    }
+
+    .se-sidebar {
+        width: 220px;
+        flex: 0 0 220px;
+        overflow-y: auto;
+        border-right: 1px solid var(--border-color, #dee2e6);
+        font-size: 0.85rem;
+    }
+
+    .se-sidebar-group-title {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        letter-spacing: 0.04em;
+        color: var(--text-muted, #6c757d);
+        padding: 0.5rem 0.75rem 0.15rem;
+    }
+
+    .se-sidebar-item {
+        padding: 0.2rem 0.75rem;
+        cursor: pointer;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        &:hover {
+            background: var(--o-hover-bg, rgba(0, 0, 0, 0.04));
+        }
+
+        &.active {
+            background: var(--o-active-bg, rgba(43, 108, 176, 0.15));
+            font-weight: 600;
+        }
+    }
+
+    .se-canvas-wrap {
+        flex: 1 1 auto;
+        position: relative;
+        min-width: 0;
+    }
+
+    .se-canvas {
+        position: absolute;
+        inset: 0;
+    }
+
+    .se-loading-overlay,
+    .se-error-overlay {
+        position: absolute;
+        top: 0.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        padding: 0.35rem 0.9rem;
+        border-radius: 0.25rem;
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+    }
+
+    .se-inspector {
+        width: 320px;
+        flex: 0 0 320px;
+        overflow-y: auto;
+        border-left: 1px solid var(--border-color, #dee2e6);
+        padding: 0.75rem;
+        font-size: 0.85rem;
+    }
+
+    .se-inspector-section {
+        margin-top: 0.75rem;
+
+        h6 {
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: var(--text-muted, #6c757d);
+        }
+    }
+
+    .se-fields-table {
+        font-size: 0.78rem;
+
+        .se-field-inherited {
+            opacity: 0.55;
+            font-style: italic;
+        }
+    }
+
+    .se-origin {
+        font-size: 0.7rem;
+        padding: 0.05rem 0.35rem;
+        border-radius: 0.7rem;
+        background: rgba(0, 0, 0, 0.06);
+    }
+
+    .se-kind-badge {
+        text-transform: capitalize;
+    }
+    .se-kind-owned { background: #2b6cb0; color: #fff; }
+    .se-kind-extended { background: #b7791f; color: #fff; }
+    .se-kind-boundary { background: #718096; color: #fff; }
+    .se-kind-wizard { background: #6b46c1; color: #fff; }
+    .se-kind-view { background: #2c7a7b; color: #fff; }
+
+    .se-statusbar {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.75rem;
+        color: var(--text-muted, #6c757d);
+        border-top: 1px solid var(--border-color, #dee2e6);
+    }
+
+    .se-legend-panel {
+        position: absolute;
+        bottom: 2.2rem;
+        right: 1rem;
+        max-width: 360px;
+        max-height: 60vh;
+        overflow-y: auto;
+        background: rgba(255, 255, 255, 0.97);
+        border: 1px solid var(--border-color, #dee2e6);
+        border-radius: 0.4rem;
+        padding: 0.75rem;
+        font-size: 0.78rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        z-index: 30;
+    }
+
+    .se-legend-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.4rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .se-legend-swatch {
+        display: inline-block;
+        width: 0.9rem;
+        height: 0.9rem;
+        border-radius: 0.2rem;
+        margin-top: 0.15rem;
+        flex: 0 0 auto;
+        border-width: 2px;
+        border-style: solid;
+    }
+    .se-legend-swatch.se-node-owned { background: #ebf4ff; border-color: #2b6cb0; }
+    .se-legend-swatch.se-node-extended { background: #fffaf0; border-color: #b7791f; border-style: dashed; }
+    .se-legend-swatch.se-node-boundary { background: #f7fafc; border-color: #718096; }
+    .se-legend-swatch.se-node-wizard { background: #faf5ff; border-color: #6b46c1; border-style: dotted; }
+    .se-legend-swatch.se-node-view { background: #e6fffa; border-color: #2c7a7b; border-style: double; }
+
+    .se-legend-line {
+        display: inline-block;
+        width: 1.4rem;
+        height: 0;
+        margin-top: 0.55rem;
+        flex: 0 0 auto;
+        border-top-width: 2px;
+        border-top-style: solid;
+    }
+    .se-legend-line.se-edge-many2one { border-color: #2d3748; }
+    .se-legend-line.se-edge-one2many { border-color: #a0aec0; border-top-style: dashed; }
+    .se-legend-line.se-edge-many2many { border-color: #805ad5; }
+    .se-legend-line.se-edge-inherits { border-color: #c53030; border-top-width: 4px; }
+    .se-legend-line.se-edge-related { border-color: #319795; border-top-style: dotted; }
+}
