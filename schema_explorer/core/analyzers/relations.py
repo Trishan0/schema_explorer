@@ -88,6 +88,15 @@ def build_edges(env, node_ids: frozenset[str], options) -> list[dict]:
                         'ondelete': getattr(f, 'ondelete', None) or None,
                         'required': bool(getattr(f, 'required', False)),
                         'check_company': bool(getattr(f, 'check_company', False)),
+                        # A non-stored many2one (computed/related, not
+                        # written to a column) isn't really "in the
+                        # database" any more than a one2many is - found
+                        # while testing the company analyzer against
+                        # mail.activity.mixin's (non-stored)
+                        # activity_user_id, which otherwise looked like a
+                        # real cross-company risk (C1) for every model that
+                        # uses the mixin.
+                        'physical': bool(f.store and getattr(f, 'column_type', None)),
                     })
             elif f.type == 'one2many':
                 target = f.comodel_name
@@ -113,6 +122,9 @@ def build_edges(env, node_ids: frozenset[str], options) -> list[dict]:
                         'junction': getattr(f, 'relation', None),
                         'column1': getattr(f, 'column1', None),
                         'column2': getattr(f, 'column2', None),
+                        # a many2many's "column" is the junction table, which
+                        # only exists when the field is actually stored.
+                        'physical': bool(f.store),
                     })
             elif getattr(f, 'related', None):
                 target = _related_target(model, f)

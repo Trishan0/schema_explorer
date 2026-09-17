@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Schema Explorer',
-    'version': '19.0.2.0.0',
+    'version': '19.0.3.0.0',
     'category': 'Technical',
     'summary': 'Module-scoped database and ORM schema visualizer for developers and demos',
     'description': """
@@ -18,9 +18,18 @@ Merges three sources of truth:
   ``ir.model.constraint``)
 * the physical PostgreSQL catalog (columns, indexes, foreign keys, sizes)
 
-Phase 1 adds the in-app ERD/Models view: a menu, a "View Schema" button on
+Phase 1 added the in-app ERD/Models view: a menu, a "View Schema" button on
 the module form, and an OWL client action rendering the graph on a
 Cytoscape.js canvas with a sidebar, an inspector panel and a legend.
+
+Phase 2 adds a Company view (which fields carry ``company_id``, which
+models delegate their scoping through ``_inherits``, record rules
+translated into plain English, and cross-company link warnings) and a
+Physical view (row counts, sizes, indexes, constraints, and a drift report
+comparing what the code expects against what is actually in the database -
+gated behind a stricter access group, since row counts on a client database
+can themselves be sensitive).
+
 Phase 0's portable core pipeline (``core/``) and shell export script are
 unchanged and still run with no server at all. See ``PLAN.md`` in the
 repository root for the full roadmap.

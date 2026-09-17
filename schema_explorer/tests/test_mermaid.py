@@ -13,7 +13,8 @@ def _node(model, table, fields):
 
 def _field(name, ftype, **overrides):
     base = {'name': name, 'type': ftype, 'label': name, 'target': None,
-            'store': True, 'required': False, 'index': False, 'origin': 'own'}
+            'store': True, 'has_column': ftype not in ('one2many', 'many2many'),
+            'required': False, 'index': False, 'origin': 'own'}
     base.update(overrides)
     return base
 

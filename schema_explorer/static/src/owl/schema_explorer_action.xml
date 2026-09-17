@@ -26,6 +26,16 @@
                     </div>
                 </div>
 
+                <div class="se-view-control btn-group btn-group-sm" role="group">
+                    <t t-foreach="viewChoices" t-as="v" t-key="v.id">
+                        <button type="button"
+                                t-att-class="'btn ' + (state.view === v.id ? 'btn-primary' : 'btn-outline-secondary')"
+                                t-on-click="() => this.setView(v.id)">
+                            <t t-esc="v.label"/>
+                        </button>
+                    </t>
+                </div>
+
                 <div class="se-depth-control btn-group btn-group-sm" role="group">
                     <t t-foreach="depthChoices" t-as="d" t-key="d">
                         <button type="button"
@@ -59,6 +69,17 @@
                 <div class="se-sidebar">
                     <div class="alert alert-info m-2" t-if="!state.graph &amp;&amp; !state.loading">
                         Add a module above to see its schema.
+                    </div>
+                    <div class="se-sidebar-group se-drift-group" t-if="state.view === 'physical' &amp;&amp; driftSummary">
+                        <div class="se-sidebar-group-title" t-esc="'drift (' + driftSummary.total + ')'"/>
+                        <div class="alert alert-success m-2 p-2 small" t-if="driftSummary.total === 0">
+                            No mismatch found between the code and the database.
+                        </div>
+                        <div class="se-drift-item" t-foreach="driftSummary.items" t-as="item" t-key="item.id"
+                             t-on-click="() => this.focusNode(item.model)">
+                            <span t-att-class="'badge se-severity-' + item.severity" t-esc="item.check"/>
+                            <span t-esc="item.message"/>
+                        </div>
                     </div>
                     <t t-foreach="['owned', 'extended', 'boundary', 'wizard', 'view']" t-as="kind" t-key="kind">
                         <t t-set="nodes" t-value="nodesByKind[kind]"/>
@@ -109,6 +130,51 @@
                             <ul class="list-unstyled">
                                 <li t-foreach="Object.entries(node.inherits)" t-as="entry" t-key="entry[0]">
                                     <t t-esc="entry[1]"/> &#8594; <a href="#" t-on-click.prevent="() => this.focusNode(entry[0])" t-esc="entry[0]"/>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="se-inspector-section" t-if="selectedNodeCompanyInfo">
+                            <h6>Multi-company</h6>
+                            <t t-set="ci" t-value="selectedNodeCompanyInfo"/>
+                            <div t-if="ci.ownEntry">
+                                <span class="badge se-kind-badge se-company-badge-scoped">company-scoped</span>
+                                via <code t-esc="ci.ownEntry.company_field"/>
+                                <span t-if="ci.ownEntry.required">(required)</span>
+                                <span t-if="ci.ownEntry.check_company_auto" class="text-muted"> · check_company_auto</span>
+                            </div>
+                            <div t-elif="ci.inheritedEntry">
+                                <span class="badge se-kind-badge se-company-badge-scoped">company-scoped</span>
+                                (via <a href="#" t-on-click.prevent="() => this.focusNode(ci.inheritedEntry.via)" t-esc="ci.inheritedEntry.via"/>)
+                            </div>
+                            <div t-elif="ci.isGlobal">
+                                <span class="badge se-kind-badge se-company-badge-global">shared across all companies</span>
+                            </div>
+                            <ul class="list-unstyled small mt-1" t-if="ci.rules.length">
+                                <li t-foreach="ci.rules" t-as="rule" t-key="rule.xmlid || rule.name">
+                                    <span class="badge text-bg-light" t-esc="rule.global ? 'global' : 'group'"/>
+                                    <t t-esc="rule.english || rule.domain"/>
+                                </li>
+                            </ul>
+                            <ul class="list-unstyled small mt-1" t-if="ci.leaks.length">
+                                <li t-foreach="ci.leaks" t-as="leak" t-key="leak.check + leak.from + (leak.field || '')">
+                                    <span t-att-class="'badge se-severity-' + leak.severity" t-esc="leak.check"/>
+                                    <t t-esc="leak.message"/>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="se-inspector-section" t-if="node.physical">
+                            <h6>Physical</h6>
+                            <div class="small">
+                                <div t-if="node.physical.rows_estimate !== null">Rows (estimate): <t t-esc="node.physical.rows_estimate"/></div>
+                                <div t-if="node.physical.total_bytes !== null">Size: <t t-esc="Math.round(node.physical.total_bytes / 1024)"/> KB</div>
+                                <div><t t-esc="node.physical.indexes.length"/> indexes, <t t-esc="node.physical.constraints.length"/> constraints</div>
+                            </div>
+                            <ul class="list-unstyled small mt-1" t-if="selectedNodeDrift.length">
+                                <li t-foreach="selectedNodeDrift" t-as="item" t-key="item.id">
+                                    <span t-att-class="'badge se-severity-' + item.severity" t-esc="item.check"/>
+                                    <t t-esc="item.message"/>
                                 </li>
                             </ul>
                         </div>

@@ -176,6 +176,37 @@
     .se-kind-wizard { background: #6b46c1; color: #fff; }
     .se-kind-view { background: #2c7a7b; color: #fff; }
 
+    .se-company-badge-scoped { background: #2f855a; color: #fff; }
+    .se-company-badge-global { background: #a0aec0; color: #fff; }
+
+    .se-severity-error { background: #c53030; color: #fff; }
+    .se-severity-warning { background: #b7791f; color: #fff; }
+    .se-severity-info { background: #3182ce; color: #fff; }
+
+    .se-drift-group {
+        border-bottom: 1px solid var(--border-color, #dee2e6);
+        padding-bottom: 0.4rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .se-drift-item {
+        padding: 0.25rem 0.75rem;
+        cursor: pointer;
+        font-size: 0.78rem;
+        line-height: 1.3;
+        display: flex;
+        gap: 0.35rem;
+        align-items: baseline;
+
+        &:hover {
+            background: var(--o-hover-bg, rgba(0, 0, 0, 0.04));
+        }
+
+        .badge {
+            flex: 0 0 auto;
+        }
+    }
+
     .se-statusbar {
         padding: 0.25rem 0.75rem;
         font-size: 0.75rem;

@@ -98,3 +98,37 @@ class TestPatientSafetyAcceptance(TransactionCase):
         graph = build_graph(self.env, Options(modules=('patient_safety',), depth=0, include_wizards=False))
         wizard_ids = {n['id'] for n in graph['nodes'] if n['kind'] == 'wizard'}
         self.assertFalse(wizard_ids)
+
+    def test_all_delegated_incident_types_listed_in_company_inherits(self):
+        # PLAN.md, section 16.3: "all 9 delegated incident types listed in
+        # company.inherits_company".
+        inherits_company = {e['model']: e['via'] for e in self.graph['company']['inherits_company']}
+        incident_types = [
+            n['id'] for n in self.graph['nodes']
+            if n.get('inherits', {}).get('patient.safety.incident')
+        ]
+        self.assertEqual(len(incident_types), EXPECTED_INHERITS_CHILD_COUNT)
+        for model in incident_types:
+            self.assertEqual(inherits_company.get(model), 'patient.safety.incident')
+
+    def test_incident_itself_is_company_scoped(self):
+        company_models = {m['model']: m for m in self.graph['company']['company_models']}
+        self.assertIn('patient.safety.incident', company_models)
+        self.assertEqual(company_models['patient.safety.incident']['company_field'], 'company_id')
+
+    def test_drift_against_real_database_is_the_one_known_finding(self):
+        # PLAN.md, section 17, phase 2 exit criteria: every drift item is
+        # either real or a fixed false positive. As of 19.0.3.2.0 against
+        # odoo_hsapp4, the only genuine finding is res.users.action_id
+        # (a many2one with no database-level foreign key - a deliberate
+        # Odoo core choice, backed by an @api.constrains instead).
+        graph = build_graph(self.env, Options(modules=('patient_safety',), depth=0, physical=True))
+        self.assertEqual(len(graph['drift']), 1, graph['drift'])
+        self.assertEqual(graph['drift'][0]['check'], 'D5')
+        self.assertEqual(graph['drift'][0]['model'], 'res.users')
+
+    def test_hooks_detection_finds_the_company_backfill(self):
+        hooks = self.graph['company']['hooks']
+        hooks_file = next((h for h in hooks if h['file'] == 'hooks.py'), None)
+        self.assertIsNotNone(hooks_file)
+        self.assertIn('_backfill_incident_company', hooks_file['functions'])

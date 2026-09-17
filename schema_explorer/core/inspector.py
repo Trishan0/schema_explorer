@@ -20,6 +20,9 @@ from .expand import expand
 from .registry_reader import describe_field, describe_model
 from .scope import resolve_scope
 from .analyzers.relations import build_edges
+from .analyzers.company import analyze_company
+from .physical.pg_catalog import count_public_tables, fetch_physical
+from .physical.drift import compute_drift
 
 
 def _get_model(env, model_name: str):
@@ -36,6 +39,7 @@ def _field_output(model_name: str, fdesc: dict, origin: str, defined_in_module: 
         'label': fdesc['label'],
         'target': fdesc['target'],
         'store': fdesc['store'],
+        'has_column': fdesc['has_column'],
         'required': fdesc['required'],
         'index': fdesc['index'],
         'origin': origin,
@@ -157,6 +161,7 @@ def build_graph(env, options) -> dict:
             'module': _node_module(model_name, descriptor, scope),
             'mixins': list(mixins),
             'inherits': dict(descriptor['inherits']),
+            'check_company_auto': descriptor['check_company_auto'],
             'fields': fields_out,
             'source': [] if options.anonymize else [dict(s) for s in descriptor['source']],
         })
@@ -171,11 +176,38 @@ def build_graph(env, options) -> dict:
         for name, used_by in sorted(abstract_models.items())
     ]
     graph['warnings'] = warnings
+
+    # The multi-company analyzer only reads what's already in `nodes`/
+    # `edges` plus ir.rule - no physical group required (PLAN.md, section
+    # 8.2 is not gated the way section 8.5 is).
+    graph['company'] = analyze_company(env, nodes, edges, list(options.modules))
+
+    db_tables_total = count_public_tables(env)
+
+    if options.physical:
+        table_names = (
+            {n['table'] for n in nodes if n.get('table')}
+            | {e['junction'] for e in edges if e.get('junction')}
+            | set(scope.owned_relations)
+        )
+        physical = fetch_physical(env, sorted(table_names))
+        for node in nodes:
+            phys = physical.get(node.get('table'))
+            if phys is not None:
+                node['physical'] = {
+                    'rows_estimate': phys['rows_estimate'],
+                    'total_bytes': phys['total_bytes'],
+                    'indexes': phys['indexes'],
+                    'constraints': phys['constraints'],
+                }
+        graph['drift'] = compute_drift(nodes, physical, dict(scope.owned_relations))
+
     graph['stats'] = {
         'nodes': len(nodes),
         'edges': len(edges),
         'abstract_models': len(abstract_models),
         'hidden_by_caps': int(expansion.truncated),
+        'db_tables_total': db_tables_total,
         'build_seconds': round(time.monotonic() - started, 4),
     }
 

@@ -37,6 +37,11 @@ export class SchemaExplorerAction extends Component {
             selectedNodeId: null,
             hiddenNodeIds: new Set(),
             showLegend: false,
+            // 'erd' | 'company' | 'physical' (PLAN.md, section 9.3). Only
+            // 'physical' changes what is *fetched* (row counts, sizes, the
+            // drift report); 'company' is a pure style overlay on data the
+            // graph already carries.
+            view: 'erd',
         });
 
         onWillStart(async () => {
@@ -80,6 +85,10 @@ export class SchemaExplorerAction extends Component {
             depth: this.state.depth,
             include_wizards: this.state.includeWizards,
             include_technical_fields: this.state.includeTechnicalFields,
+            // Row counts/sizes/drift are only worth fetching for the
+            // Physical view - everywhere else this stays false, so a user
+            // without the physical group never even asks for it.
+            physical: this.state.view === 'physical',
         };
     }
 
@@ -98,6 +107,7 @@ export class SchemaExplorerAction extends Component {
             this.state.hiddenNodeIds = new Set();
             if (this.renderer) {
                 this.renderer.mount(graph, { hiddenNodeIds: this.state.hiddenNodeIds });
+                this.renderer.applyViewMode(this.state.view, graph);
             }
         } catch (error) {
             this.state.error = (error && error.data && error.data.message) || String(error);
@@ -166,6 +176,24 @@ export class SchemaExplorerAction extends Component {
         this.state.showLegend = !this.state.showLegend;
     }
 
+    async setView(view) {
+        const needsPhysicalFetch = view === 'physical' && !(this.state.graph && this.state.graph.drift);
+        this.state.view = view;
+        if (needsPhysicalFetch) {
+            await this.reload();
+        } else if (this.renderer && this.state.graph) {
+            this.renderer.applyViewMode(view, this.state.graph);
+        }
+    }
+
+    get viewChoices() {
+        return [
+            { id: 'erd', label: 'ERD' },
+            { id: 'company', label: 'Company' },
+            { id: 'physical', label: 'Physical' },
+        ];
+    }
+
     onCanvasSearchInput(ev) {
         this.state.canvasSearchTerm = ev.target.value;
         if (this.renderer) {
@@ -218,6 +246,48 @@ export class SchemaExplorerAction extends Component {
 
     mixinDescription(mixinName) {
         return MIXIN_DESCRIPTIONS[mixinName] || null;
+    }
+
+    /** Company-scoping summary for the inspector panel (PLAN.md, section
+     * 9.5 point 4): is this model scoped, via which field, what rules
+     * apply in English, and any C1/C4 findings that mention it. */
+    get selectedNodeCompanyInfo() {
+        const node = this.selectedNode;
+        const company = this.state.graph && this.state.graph.company;
+        if (!node || !company) {
+            return null;
+        }
+        const ownEntry = company.company_models.find((m) => m.model === node.id);
+        const inheritedEntry = company.inherits_company.find((m) => m.model === node.id);
+        const isGlobal = company.global_models.includes(node.id);
+        return {
+            ownEntry,
+            inheritedEntry,
+            isGlobal,
+            rules: company.rules_plain.filter((r) => r.model === node.id),
+            leaks: company.leaks.filter((l) => l.from === node.id || l.to === node.id),
+        };
+    }
+
+    /** Drift findings for the selected node (PLAN.md, section 9.5 point 6). */
+    get selectedNodeDrift() {
+        const node = this.selectedNode;
+        const drift = this.state.graph && this.state.graph.drift;
+        if (!node || !drift) {
+            return [];
+        }
+        return drift.filter((d) => d.model === node.id);
+    }
+
+    get driftSummary() {
+        const drift = this.state.graph && this.state.graph.drift;
+        if (!drift) {
+            return null;
+        }
+        return {
+            total: drift.length,
+            items: drift,
+        };
     }
 
     focusNode(nodeId) {

@@ -777,6 +777,14 @@ A `post_install` test tagged `schema_explorer_reference`, **skipped unless `pati
 - Drift run on `odoo_hsapp4` produces a list reviewed by a developer. Every item is either a real finding or a documented false positive that is then fixed.
 - Company view explains the building → floor → room → location chain and incident isolation without narration.
 
+**Done (2026-09-17).** D9 (orphan tables matching an owned-model prefix with no model/relation at all) is the one check **not implemented** - it needs a wildcard scan of every table in the database per module prefix, a different shape of query than D1–D8/D10; deferred, see the docstring at the top of `core/physical/drift.py`. Everything else (D1–D8, D10) is implemented and was run against `odoo_hsapp4`: the first pass found 13 apparent findings, all of which turned out to be false positives from three real gaps this module needed to close, not real drift -
+
+- **D2** flagged `res.partner.image_1920` and five similar fields as "stored but no column" - Binary fields default to `attachment=True` (stored as `ir.attachment`, not a column) while still reporting `store=True`. Fixed by adding a `has_column` signal (mirroring Odoo's own `Field.column_type is not None` check) and using it instead of `store` everywhere a check assumes a physical column.
+- **D3** flagged `res.partner.barcode`/`company_registry` and `res.company.alias_domain_id` as unindexed - all three are genuinely indexed, but as **partial or expression indexes** (`USING btree (((barcode IS NOT NULL))) WHERE (barcode IS NOT NULL)`), which a naive "first `(` to last `)`" span mis-parses. Fixed with a balanced-parenthesis scan plus whole-word matching.
+- The **company analyzer (C1)** flagged every `mail.activity.mixin` field (e.g. `activity_user_id`) on every model using the mixin as a cross-company link risk - these are non-stored/computed, so there is no real column to be a risk at all. Fixed by adding `physical` to many2one/many2many edges (false when non-stored) and having C1/C4 skip non-physical edges.
+
+After those three fixes, the same run against `odoo_hsapp4` finds exactly **one real item**: `res.users.action_id` (D5, a many2one to `ir.actions.actions` with no database-level foreign key - a deliberate Odoo core choice backed by an `@api.constrains` instead of a DB constraint). The company analyzer's C1/C4 findings against `patient_safety` are also now real and demo-worthy: 9 unguarded `incident_id` links from the delegated incident types, and 6 links from `patient.safety.incident` to genuinely shared classification/taxonomy tables (category, subcategory, injury type, error stage, medication error type, body fluid type).
+
 ### Phase 3: Security + Lifecycle
 
 | Task |
@@ -853,6 +861,9 @@ Phases 2 and 3 are independent and can run in parallel.
 | R15 | `sudo()` in the service leaks metadata to low-privilege users | Group check **before** any `sudo()`; test in `test_access` |
 | R16 | Standalone HTML leaks sensitive info in a client demo | `anonymize` default on, no record data ever, export test in Phase 4 |
 | R17 | `ir.model.data` (`model='ir.model'`) is written by every module that *touches* a model, not just the one that defines it - naively treating it as ownership misclassifies every extended core model as "owned" (found while building Phase 0; see section 4) | True ownership resolved from the registry (the one contributing class whose own `__dict__` sets `_name`), not from `ir.model.data` alone - `core/registry_reader.find_defining_module` |
+| R18 | `store=True` does not mean "has a database column" - a Binary field defaults to `attachment=True` (stored as `ir.attachment`); a naive drift check flags every such field as a missing column (found while building Phase 2 against `res.partner`'s image fields) | Added `has_column` (mirrors Odoo's own `Field.column_type is not None`) and used it everywhere a check assumes a physical column - `core/registry_reader.describe_field` |
+| R19 | Parsing a Postgres index/FK definition string by "first `(` to last `)`" breaks on partial indexes (`WHERE ...`) and expression indexes (extra nested parens) - both are common and both produced false D3/D5 drift (found against `res.partner.barcode`/`company_registry`, `res.company.alias_domain_id`) | Balanced-parenthesis scan + whole-word match instead of naive index/rindex - `core/physical/drift._first_balanced_group` |
+| R20 | Every many2one field counts as a real relationship by default, but a non-stored (computed/related) one has no column and isn't a real cross-company-link risk - flagged on every `mail.activity.mixin` field on every model using it (found while building the C1 check in Phase 2) | Added `physical` to many2one/many2many edges (false when not stored); C1/C4 skip non-physical edges - `core/analyzers/relations.py`, `core/analyzers/company.py` |
 
 ## 19. Open questions
 

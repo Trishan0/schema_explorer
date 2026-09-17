@@ -48,6 +48,10 @@ def _entity_block(node: dict) -> list[str]:
         # Fields borrowed through _inherits have no column on this table.
         if fld['origin'] == 'inherits':
             continue
+        # A non-stored many2one (computed/related) has no column either -
+        # same reasoning as one2many/many2many above.
+        if fld['type'] == 'many2one' and not fld.get('has_column'):
+            continue
         # many2one already renders as type "FK" - only 'id' needs its own
         # marker, or many2one rows would read "FK field_id FK".
         marker = ' PK' if fld['name'] == 'id' else ''
@@ -76,13 +80,15 @@ def to_mermaid(graph: dict) -> str:
 
         if kind == 'many2one':
             near_target = '||' if edge.get('required') else 'o|'
-            lines.append(f'    {dst} {near_target}--o{{ {src} : "{label}"')
+            suffix = '' if edge.get('physical', True) else ' (computed, no column)'
+            lines.append(f'    {dst} {near_target}--o{{ {src} : "{label}{suffix}"')
         elif kind == 'one2many':
             if (edge['to'], edge.get('inverse')) in covered_many2one:
                 continue
             lines.append(f'    {dst} }}o--o{{ {src} : "{label} (no column)"')
         elif kind == 'many2many':
-            lines.append(f'    {src} }}o--o{{ {dst} : "{label}"')
+            suffix = '' if edge.get('physical', True) else ' (computed, no join table)'
+            lines.append(f'    {src} }}o--o{{ {dst} : "{label}{suffix}"')
         elif kind == 'inherits':
             lines.append(f'    {dst} ||--|| {src} : "_inherits ({label})"')
         # 'related' edges are informational only and omitted here - Mermaid
