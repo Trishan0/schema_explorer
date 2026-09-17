@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_schema_explorer_diagram_list" model="ir.ui.view">
+        <field name="name">schema.explorer.diagram.list</field>
+        <field name="model">schema.explorer.diagram</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="module_ids" widget="many2many_tags"/>
+                <field name="view"/>
+                <field name="user_id"/>
+                <field name="shared"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_schema_explorer_diagram_form" model="ir.ui.view">
+        <field name="name">schema.explorer.diagram.form</field>
+        <field name="model">schema.explorer.diagram</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_open" type="object" string="Open" class="btn-primary"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="module_ids" widget="many2many_tags"/>
+                            <field name="view"/>
+                            <field name="shared"/>
+                        </group>
+                        <group>
+                            <field name="user_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Stories">
+                            <field name="story_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_schema_explorer_diagram" model="ir.actions.act_window">
+        <field name="name">Saved Diagrams</field>
+        <field name="res_model">schema.explorer.diagram</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="view_schema_explorer_story_form" model="ir.ui.view">
+        <field name="name">schema.explorer.story.form</field>
+        <field name="model">schema.explorer.story</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <field name="diagram_id" invisible="1"/>
+                    <field name="step_ids">
+                        <list editable="bottom">
+                            <field name="sequence" widget="handle"/>
+                            <field name="title"/>
+                            <field name="view"/>
+                            <field name="narration"/>
+                        </list>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

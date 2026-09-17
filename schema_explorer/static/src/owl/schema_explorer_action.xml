@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
     <t t-name="schema_explorer.Action">
-        <div class="o_schema_explorer">
+        <div t-att-class="'o_schema_explorer' + (state.presenting ? ' se-presenting' : '')">
             <div class="se-toolbar">
                 <div class="se-module-picker">
                     <div class="se-module-chips">
@@ -63,6 +63,26 @@
 
                 <button type="button" class="btn btn-sm btn-outline-secondary" t-on-click="onFit">Fit</button>
                 <button type="button" class="btn btn-sm btn-outline-secondary" t-on-click="toggleLegend">Legend</button>
+
+                <button type="button" class="btn btn-sm btn-outline-secondary" t-on-click="saveDiagram"
+                        t-att-disabled="!state.selectedModules.length">
+                    <t t-esc="state.diagramId ? 'Save' : 'Save…'"/>
+                </button>
+                <button type="button" t-att-class="'btn btn-sm ' + (state.showStoryPanel ? 'btn-primary' : 'btn-outline-secondary')"
+                        t-on-click="toggleStoryPanel">Story</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" t-on-click="startPresentation"
+                        t-att-disabled="!canPresent">▶ Present</button>
+
+                <div class="se-export-dropdown dropdown">
+                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                        Export
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li t-foreach="exportChoices" t-as="choice" t-key="choice.id">
+                            <a href="#" class="dropdown-item" t-on-click.prevent="() => this.exportGraph(choice.id)" t-esc="choice.label"/>
+                        </li>
+                    </ul>
+                </div>
             </div>
 
             <div class="se-body">
@@ -99,6 +119,24 @@
                     <div class="se-canvas" t-ref="canvas"/>
                     <div class="se-loading-overlay" t-if="state.loading">Loading…</div>
                     <div class="se-error-overlay alert alert-danger" t-if="state.error" t-esc="state.error"/>
+
+                    <!-- Presentation mode (PLAN.md, section 9.7): the same
+                         canvas/renderer is reused, just blown up fullscreen
+                         via the .se-presenting CSS on the root - no second
+                         Cytoscape instance. Arrow keys step through
+                         (JS onKeyDown). -->
+                    <t t-if="state.presenting">
+                        <button type="button" class="se-present-exit" t-on-click="exitPresentation">✕ Exit</button>
+                        <div class="se-present-panel" t-if="presentStep">
+                            <div class="se-present-title" t-esc="presentStep.title"/>
+                            <div class="se-present-narration" t-esc="presentStep.narration"/>
+                            <div class="se-present-controls">
+                                <button type="button" class="btn btn-outline-light" t-on-click="presentPrev">&#8249; Prev</button>
+                                <span t-esc="(state.presentStepIndex + 1) + ' / ' + activeStory.steps.length"/>
+                                <button type="button" class="btn btn-outline-light" t-on-click="presentNext">Next &#8250;</button>
+                            </div>
+                        </div>
+                    </t>
                 </div>
 
                 <div class="se-inspector">
@@ -303,6 +341,52 @@
                     <span t-att-class="'se-legend-line se-edge-' + item.kind"/>
                     <strong t-esc="item.title"/> — <span t-esc="item.description"/>
                 </div>
+            </div>
+
+            <!-- Author mode (PLAN.md, section 9.7): build a story on top of
+                 the saved diagram, one step at a time from whatever the
+                 canvas is currently showing. -->
+            <div class="se-story-panel" t-if="state.showStoryPanel">
+                <div class="se-story-panel-header">
+                    <h6>Stories</h6>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" t-on-click="newStory">+ New story</button>
+                </div>
+                <div class="text-muted small" t-if="!state.diagramId">Save the diagram first to attach a story to it.</div>
+                <t t-if="state.stories.length">
+                    <div class="se-story-tabs">
+                        <button t-foreach="state.stories" t-as="story" t-key="story.id"
+                                type="button"
+                                t-att-class="'btn btn-sm ' + (state.activeStoryIndex === story_index ? 'btn-primary' : 'btn-outline-secondary')"
+                                t-on-click="() => state.activeStoryIndex = story_index">
+                            <t t-esc="story.name"/>
+                        </button>
+                    </div>
+                    <t t-if="activeStory">
+                        <div class="se-story-step-list">
+                            <div class="se-story-step-row" t-foreach="activeStory.steps" t-as="step" t-key="step.id">
+                                <span class="badge text-bg-light" t-esc="step_index + 1"/>
+                                <div class="se-story-step-body">
+                                    <strong t-esc="step.title || '(untitled step)'"/>
+                                    <div class="text-muted small" t-esc="step.narration"/>
+                                    <div class="text-muted small">
+                                        view: <t t-esc="step.view"/>
+                                        <t t-if="step.focus_nodes.length"> · focus: <t t-esc="step.focus_nodes.join(', ')"/></t>
+                                    </div>
+                                </div>
+                                <a href="#" class="se-story-step-delete" t-on-click.prevent="() => this.deleteStep(step.id)">&#215;</a>
+                            </div>
+                            <div class="text-muted small" t-if="!activeStory.steps.length">No steps yet.</div>
+                        </div>
+                        <div class="se-story-panel-actions">
+                            <button type="button" class="btn btn-sm btn-primary" t-on-click="addStepFromCurrentView">
+                                + Add step from current view
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" t-on-click="() => this.deleteStory(activeStory.id)">
+                                Delete story
+                            </button>
+                        </div>
+                    </t>
+                </t>
             </div>
         </div>
     </t>

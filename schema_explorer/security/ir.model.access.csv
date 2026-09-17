@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_schema_explorer_diagram_user,schema.explorer.diagram.user,model_schema_explorer_diagram,group_schema_explorer_user,1,1,1,1
+access_schema_explorer_story_user,schema.explorer.story.user,model_schema_explorer_story,group_schema_explorer_user,1,1,1,1
+access_schema_explorer_story_step_user,schema.explorer.story.step.user,model_schema_explorer_story_step,group_schema_explorer_user,1,1,1,1

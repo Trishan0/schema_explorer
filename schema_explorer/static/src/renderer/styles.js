@@ -162,6 +162,25 @@ export function buildStylesheet() {
         },
     );
 
+    // -- Presentation mode / story player (PLAN.md, section 9.7): a step's
+    // `focus_nodes`/`highlight_edges` get a bright highlight, everything
+    // else dims - shared by the in-app story player and the standalone
+    // HTML export's vanilla one, since both load this same stylesheet.
+    rules.push(
+        {
+            selector: "node.se-story-focus",
+            style: { "border-width": 5, "border-color": "#dd6b20", "z-index": 998 },
+        },
+        {
+            selector: "edge.se-story-focus",
+            style: { "line-color": "#dd6b20", "target-arrow-color": "#dd6b20", width: 3, "z-index": 998 },
+        },
+        {
+            selector: ".se-story-dim",
+            style: { opacity: 0.15 },
+        },
+    );
+
     return rules;
 }
 

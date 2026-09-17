@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        PLAN.md, section 13: "Record rules: own diagrams + shared=True."
+        Access rights (ir.model.access.csv) say a Schema Explorer user may
+        read/write/create/unlink these models at all; these rules narrow
+        *which* rows - the owner's own, or anything explicitly shared.
+    -->
+    <record id="rule_schema_explorer_diagram_own_or_shared" model="ir.rule">
+        <field name="name">Schema Explorer diagrams: own or shared</field>
+        <field name="model_id" ref="model_schema_explorer_diagram"/>
+        <field name="domain_force">['|', ('user_id', '=', user.id), ('shared', '=', True)]</field>
+        <field name="groups" eval="[(4, ref('group_schema_explorer_user'))]"/>
+    </record>
+
+    <record id="rule_schema_explorer_story_via_diagram" model="ir.rule">
+        <field name="name">Schema Explorer stories: follow their diagram's visibility</field>
+        <field name="model_id" ref="model_schema_explorer_story"/>
+        <field name="domain_force">
+            ['|', ('diagram_id.user_id', '=', user.id), ('diagram_id.shared', '=', True)]
+        </field>
+        <field name="groups" eval="[(4, ref('group_schema_explorer_user'))]"/>
+    </record>
+
+    <record id="rule_schema_explorer_story_step_via_diagram" model="ir.rule">
+        <field name="name">Schema Explorer story steps: follow their diagram's visibility</field>
+        <field name="model_id" ref="model_schema_explorer_story_step"/>
+        <field name="domain_force">
+            ['|', ('story_id.diagram_id.user_id', '=', user.id), ('story_id.diagram_id.shared', '=', True)]
+        </field>
+        <field name="groups" eval="[(4, ref('group_schema_explorer_user'))]"/>
+    </record>
+</odoo>

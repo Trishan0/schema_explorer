@@ -11,4 +11,10 @@
               parent="menu_schema_explorer_root"
               action="action_schema_explorer"
               sequence="10"/>
+
+    <menuitem id="menu_schema_explorer_diagrams"
+              name="Saved Diagrams"
+              parent="menu_schema_explorer_root"
+              action="action_schema_explorer_diagram"
+              sequence="20"/>
 </odoo>

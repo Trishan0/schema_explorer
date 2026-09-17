@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }}</title>
+<style>{{ inline_css }}</style>
+</head>
+<body>
+<div id="se-app">
+  <div id="se-topbar">
+    <strong>{{ title }}</strong>
+    <span id="se-status">{{ status_text }}</span>
+    <button id="se-legend-toggle" type="button">Legend</button>
+  </div>
+  <div id="se-body">
+    <div id="se-sidebar"></div>
+    <div id="se-canvas-wrap">
+      <div id="se-canvas"></div>
+      <div id="se-legend" hidden></div>
+    </div>
+    <div id="se-inspector">Select a node to inspect it.</div>
+  </div>
+  <div id="se-story-panel" style="display:none">
+    <div id="se-story-title"></div>
+    <div id="se-story-narration"></div>
+    <div class="se-story-controls">
+      <button id="se-story-prev" type="button">&lsaquo; Prev</button>
+      <span id="se-story-progress"></span>
+      <button id="se-story-next" type="button">Next &rsaquo;</button>
+    </div>
+  </div>
+</div>
+<script>{{ vendor_js }}</script>
+<script>{{ app_js }}</script>
+</body>
+</html>

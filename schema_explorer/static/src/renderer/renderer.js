@@ -8,7 +8,7 @@
  * 11.1) which has no OWL runtime at all.
  */
 import { graphToElements } from "./graph_to_elements";
-import { buildStylesheet } from "./styles";
+import { buildStylesheet, NODE_KIND_STYLE, EDGE_KIND_STYLE } from "./styles";
 
 /**
  * @param {HTMLElement} container
@@ -70,12 +70,23 @@ export function createRenderer(container, handlers = {}) {
         }
     }
 
-    /** Replace the graph entirely and re-layout. */
+    /**
+     * Replace the graph entirely. Re-layouts with dagre unless
+     * `options.positions` (a saved diagram's stored layout - PLAN.md,
+     * section 13) is given, in which case those positions are applied
+     * directly and no automatic layout runs, so a saved diagram reopens
+     * exactly where its author left it.
+     */
     function mount(graph, options = {}) {
         const elements = graphToElements(graph, options);
         cy.elements().remove();
         cy.add([...elements.nodes, ...elements.edges]);
-        runLayout();
+        if (options.positions && Object.keys(options.positions).length) {
+            setPositions(options.positions);
+            cy.fit(undefined, 30);
+        } else {
+            runLayout();
+        }
         if (selectedNodeId && !cy.getElementById(selectedNodeId).empty()) {
             selectNode(selectedNodeId);
         } else {
@@ -189,9 +200,155 @@ export function createRenderer(container, handlers = {}) {
         return matches;
     }
 
+    /** Current node positions, e.g. to persist on a saved diagram
+     * (PLAN.md, section 13: `layout: {node_id: {x, y}}`). */
+    function getPositions() {
+        const positions = {};
+        cy.nodes().forEach((n) => {
+            positions[n.id()] = n.position();
+        });
+        return positions;
+    }
+
+    /** Restore positions saved by `getPositions` - nodes missing from
+     * `positions` (e.g. added since the diagram was last saved) keep
+     * wherever the last layout put them. */
+    function setPositions(positions) {
+        if (!positions) {
+            return;
+        }
+        cy.batch(() => {
+            cy.nodes().forEach((n) => {
+                const pos = positions[n.id()];
+                if (pos) {
+                    n.position(pos);
+                }
+            });
+        });
+    }
+
+    /** Current camera, in the shape a story step stores it (PLAN.md,
+     * section 9.7: "a camera (zoom + pan)"). */
+    function getViewport() {
+        return { zoom: cy.zoom(), pan: cy.pan() };
+    }
+
+    function setViewport(viewport, opts = {}) {
+        if (!viewport || !viewport.pan || typeof viewport.zoom !== "number") {
+            return;
+        }
+        if (opts.animate) {
+            cy.animate({ zoom: viewport.zoom, pan: viewport.pan }, { duration: 300 });
+        } else {
+            cy.zoom(viewport.zoom);
+            cy.pan(viewport.pan);
+        }
+    }
+
+    /** Highlight a story step's `focus_nodes`/`highlight_edges`, dimming
+     * everything else - shared by the in-app presentation mode and the
+     * standalone HTML export's story player (both load the same
+     * `se-story-focus`/`se-story-dim` classes from styles.js). */
+    function setHighlight(nodeIds = [], edgeIds = []) {
+        cy.batch(() => {
+            cy.elements().removeClass("se-story-focus se-story-dim");
+            const ids = [...nodeIds, ...edgeIds];
+            if (!ids.length) {
+                return;
+            }
+            let eles = cy.collection();
+            for (const id of ids) {
+                eles = eles.union(cy.getElementById(id));
+            }
+            cy.elements().difference(eles).addClass("se-story-dim");
+            eles.addClass("se-story-focus");
+        });
+    }
+
+    function clearHighlight() {
+        cy.elements().removeClass("se-story-focus se-story-dim");
+    }
+
+    /** A PNG data URL of the current canvas (PLAN.md, section 11, "PNG /
+     * SVG... Produced by Cytoscape (browser)") - native to Cytoscape core,
+     * no extra library needed. */
+    function exportPNG(opts = {}) {
+        return cy.png({ full: true, scale: 2, bg: "#ffffff", ...opts });
+    }
+
+    /**
+     * A hand-rolled SVG snapshot of the current canvas.
+     *
+     * PLAN.md, section 10 originally proposed the `cytoscape-svg` extension
+     * for this, listed there as MIT-licensed - it is actually GPLv3
+     * (confirmed against its published package metadata while building
+     * this export). The same reasoning the plan already applies to
+     * `elkjs`/EPL-2.0 (section 18, R14; section 19, Q2: "no; dagre only"
+     * pending a license review) applies here too, so rather than bundling
+     * a GPLv3 dependency into an LGPL-3 module without that review, this
+     * draws a plain rect-and-line SVG directly from Cytoscape's own node/
+     * edge geometry. It is not pixel-identical to the on-screen canvas
+     * (no curves, no arrowheads) but is perfectly usable for a slide.
+     */
+    function exportSVG() {
+        const bb = cy.elements().boundingBox();
+        const pad = 30;
+        const width = Math.max(1, bb.w + pad * 2);
+        const height = Math.max(1, bb.h + pad * 2);
+        const toX = (x) => x - bb.x1 + pad;
+        const toY = (y) => y - bb.y1 + pad;
+
+        const parts = [
+            `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" ` +
+                `viewBox="0 0 ${width} ${height}" font-family="sans-serif" font-size="10">`,
+            `<rect x="0" y="0" width="${width}" height="${height}" fill="#ffffff"/>`,
+        ];
+
+        cy.edges().forEach((e) => {
+            const src = e.source().position();
+            const dst = e.target().position();
+            const style = EDGE_KIND_STYLE[e.data("kind")] || { color: "#4a5568", style: "solid", width: 1.5 };
+            const dash = style.style === "dashed" ? ' stroke-dasharray="6,4"'
+                : style.style === "dotted" ? ' stroke-dasharray="2,3"' : "";
+            parts.push(
+                `<line x1="${toX(src.x)}" y1="${toY(src.y)}" x2="${toX(dst.x)}" y2="${toY(dst.y)}" ` +
+                    `stroke="${style.color}" stroke-width="${style.width}"${dash}/>`,
+            );
+        });
+
+        cy.nodes().forEach((n) => {
+            const pos = n.position();
+            const w = n.outerWidth();
+            const h = n.outerHeight();
+            const kindStyle = NODE_KIND_STYLE[n.data("kind")] || { border: "#718096", bg: "#f7fafc" };
+            parts.push(
+                `<rect x="${toX(pos.x) - w / 2}" y="${toY(pos.y) - h / 2}" width="${w}" height="${h}" ` +
+                    `rx="6" fill="${kindStyle.bg}" stroke="${kindStyle.border}" stroke-width="2"/>`,
+            );
+            const label = String(n.data("label") || "").split("\n");
+            label.forEach((line, i) => {
+                const y = toY(pos.y) + (i - (label.length - 1) / 2) * 12 + 4;
+                parts.push(`<text x="${toX(pos.x)}" y="${y}" text-anchor="middle">${escapeXml(line)}</text>`);
+            });
+        });
+
+        parts.push("</svg>");
+        return parts.join("\n");
+    }
+
+    function escapeXml(value) {
+        return String(value).replace(/[&<>"']/g, (c) => (
+            { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[c]
+        ));
+    }
+
     function destroy() {
         cy.destroy();
     }
 
-    return { cy, mount, fit, focus, search, selectNode, clearSelection, applyViewMode, destroy };
+    return {
+        cy, mount, fit, focus, search, selectNode, clearSelection, applyViewMode,
+        getPositions, setPositions, getViewport, setViewport, setHighlight, clearHighlight,
+        exportPNG, exportSVG, destroy,
+    };
 }

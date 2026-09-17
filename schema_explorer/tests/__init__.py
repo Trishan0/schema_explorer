@@ -16,4 +16,7 @@ from . import (
     test_drift,
     test_security,
     test_lifecycle,
+    test_exporters,
+    test_diagram,
+    test_controllers,
 )
