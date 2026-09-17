@@ -21,6 +21,8 @@ from .registry_reader import describe_field, describe_model
 from .scope import resolve_scope
 from .analyzers.relations import build_edges
 from .analyzers.company import analyze_company
+from .analyzers.security import analyze_security
+from .analyzers.lifecycle import analyze_lifecycle
 from .physical.pg_catalog import count_public_tables, fetch_physical
 from .physical.drift import compute_drift
 
@@ -53,6 +55,8 @@ def _field_output(model_name: str, fdesc: dict, origin: str, defined_in_module: 
         out['relation_table'] = fdesc['relation_table']
         out['column1'] = fdesc['column1']
         out['column2'] = fdesc['column2']
+    elif fdesc['type'] == 'selection':
+        out['selection'] = fdesc['selection']
     if fdesc['inherited_from']:
         # Borrowed through _inherits: not a real column on this table.
         out['stored_on'] = fdesc['inherited_from']
@@ -62,6 +66,8 @@ def _field_output(model_name: str, fdesc: dict, origin: str, defined_in_module: 
         out['check_company'] = True
     if fdesc['company_dependent']:
         out['company_dependent'] = True
+    if fdesc['groups']:
+        out['groups'] = fdesc['groups']
     return out
 
 
@@ -181,6 +187,8 @@ def build_graph(env, options) -> dict:
     # `edges` plus ir.rule - no physical group required (PLAN.md, section
     # 8.2 is not gated the way section 8.5 is).
     graph['company'] = analyze_company(env, nodes, edges, list(options.modules))
+    graph['security'] = analyze_security(env, nodes, list(options.modules))
+    graph['lifecycle'] = analyze_lifecycle(nodes)
 
     db_tables_total = count_public_tables(env)
 

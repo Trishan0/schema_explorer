@@ -105,6 +105,21 @@ export function buildStylesheet() {
         style: { "border-color": "#c53030", "border-width": 4, "border-style": "solid" },
     });
 
+    // -- Security view: a model with zero ir.model.access rows is only
+    // reachable by the superuser - worth a loud highlight.
+    rules.push({
+        selector: "node.se-no-acl",
+        style: { "border-color": "#c53030", "border-width": 4, "border-style": "dashed" },
+    });
+
+    // -- Lifecycle view: a subtle highlight for models that have a
+    // workflow/state field at all, so they stand out from pure lookup
+    // tables without redrawing the whole canvas.
+    rules.push({
+        selector: "node.se-has-lifecycle",
+        style: { "border-color": "#6b46c1", "border-width": 4 },
+    });
+
     rules.push({
         selector: "edge.se-edge",
         style: {

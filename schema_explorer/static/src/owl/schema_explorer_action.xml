@@ -164,6 +164,50 @@
                             </ul>
                         </div>
 
+                        <div class="se-inspector-section" t-if="selectedNodeSecurity">
+                            <h6>Security</h6>
+                            <t t-set="si" t-value="selectedNodeSecurity"/>
+                            <div class="alert alert-danger p-1 small" t-if="si.hasNoAccess">
+                                No access right at all - only reachable by an administrator.
+                            </div>
+                            <table class="table table-sm se-access-table" t-if="si.access.length">
+                                <thead><tr><th>Group</th><th>R</th><th>W</th><th>C</th><th>D</th></tr></thead>
+                                <tbody>
+                                    <tr t-foreach="si.access" t-as="row" t-key="row.xmlid || row.name">
+                                        <td t-esc="row.group_label"/>
+                                        <td t-esc="row.read ? '✓' : ''"/>
+                                        <td t-esc="row.write ? '✓' : ''"/>
+                                        <td t-esc="row.create ? '✓' : ''"/>
+                                        <td t-esc="row.unlink ? '✓' : ''"/>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <ul class="list-unstyled small mt-1" t-if="si.rules.length">
+                                <li t-foreach="si.rules" t-as="rule" t-key="rule.xmlid || rule.name">
+                                    <span class="badge text-bg-light" t-esc="rule.global ? 'global' : 'group'"/>
+                                    <t t-esc="rule.english || rule.domain"/>
+                                </li>
+                            </ul>
+                            <ul class="list-unstyled small mt-1" t-if="si.fieldGroups.length">
+                                <li t-foreach="si.fieldGroups" t-as="fg" t-key="fg.field">
+                                    <span class="badge se-kind-badge se-severity-info">🔑</span>
+                                    <code t-esc="fg.field"/> restricted to <t t-esc="fg.groups.join(', ')"/>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="se-inspector-section" t-if="selectedNodeLifecycle">
+                            <h6>Lifecycle</h6>
+                            <div class="small text-muted mb-1">Transitions are a best-effort guess from the source code, not a verified state machine.</div>
+                            <div t-foreach="selectedNodeLifecycle.fields" t-as="lf" t-key="lf.field" class="mb-2">
+                                <code t-esc="lf.field"/>:
+                                <t t-foreach="lf.values" t-as="pair" t-key="pair[0]">
+                                    <span t-att-class="'badge se-lifecycle-value' + (lf.transitions_guess.includes(pair[0]) ? ' se-lifecycle-reachable' : '')"
+                                          t-esc="pair[1]"/>
+                                </t>
+                            </div>
+                        </div>
+
                         <div class="se-inspector-section" t-if="node.physical">
                             <h6>Physical</h6>
                             <div class="small">
@@ -212,6 +256,34 @@
                                     <t t-esc="src.module"/>/<t t-esc="src.file"/> (<t t-esc="src.class"/>)
                                 </li>
                             </ul>
+                        </div>
+
+                        <div class="se-inspector-section">
+                            <h6>Records</h6>
+                            <button class="btn btn-sm btn-outline-secondary" t-on-click="loadSampleRecords">
+                                Show sample records ▸
+                            </button>
+                            <div t-if="sampleRecords">
+                                <div t-if="sampleRecords.loading" class="text-muted small mt-1">Loading…</div>
+                                <div t-if="sampleRecords.error" class="alert alert-warning p-1 small mt-1" t-esc="sampleRecords.error"/>
+                                <t t-if="sampleRecords.data">
+                                    <div class="text-muted small mt-1">
+                                        <t t-esc="sampleRecords.data.records.length"/> of <t t-esc="sampleRecords.data.total_count"/> total (your own access rights apply)
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm se-records-table">
+                                            <thead>
+                                                <tr><th t-foreach="sampleRecords.data.field_names" t-as="fname" t-key="fname" t-esc="fname"/></tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr t-foreach="sampleRecords.data.records" t-as="rec" t-key="rec.id">
+                                                    <td t-foreach="sampleRecords.data.field_names" t-as="fname" t-key="fname" t-esc="rec[fname]"/>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </t>
+                            </div>
                         </div>
                     </t>
                     <div class="text-muted p-3" t-else="">Select a node to inspect it.</div>

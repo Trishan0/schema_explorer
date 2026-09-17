@@ -207,6 +207,31 @@
         }
     }
 
+    .se-access-table,
+    .se-records-table {
+        font-size: 0.75rem;
+
+        th, td {
+            text-align: center;
+            white-space: nowrap;
+        }
+        th:first-child, td:first-child {
+            text-align: left;
+        }
+    }
+
+    .se-lifecycle-value {
+        display: inline-block;
+        margin: 0.1rem 0.2rem 0.1rem 0;
+        background: #e2e8f0;
+        color: #4a5568;
+
+        &.se-lifecycle-reachable {
+            background: #6b46c1;
+            color: #fff;
+        }
+    }
+
     .se-statusbar {
         padding: 0.25rem 0.75rem;
         font-size: 0.75rem;

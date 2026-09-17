@@ -14,7 +14,7 @@ import ast
 import os
 import re
 
-from .domain_english import domain_to_english
+from .rules import rules_by_model
 
 COMPANY_FIELD_NAMES = ('company_id', 'company_ids')
 
@@ -32,30 +32,6 @@ def _inherited_company_field(node: dict) -> dict | None:
         if f['name'] in COMPANY_FIELD_NAMES and f['origin'] == 'inherits':
             return f
     return None
-
-
-def _rules_for_model(env, model_name: str) -> list[dict]:
-    """``ir.rule`` records on ``model_name``, each with an English summary."""
-    ir_model = env['ir.model'].sudo().search([('model', '=', model_name)], limit=1)
-    if not ir_model:
-        return []
-    rules = env['ir.rule'].sudo().search([('model_id', '=', ir_model.id)])
-    out = []
-    for rule in rules:
-        domain_text = rule.domain_force or ''
-        out.append({
-            'xmlid': rule.get_external_id().get(rule.id) or None,
-            'model': model_name,
-            'name': rule.name,
-            'global': not bool(rule.groups),
-            'perm_read': rule.perm_read,
-            'perm_write': rule.perm_write,
-            'perm_create': rule.perm_create,
-            'perm_unlink': rule.perm_unlink,
-            'domain': domain_text,
-            'english': domain_to_english(domain_text),
-        })
-    return out
 
 
 def _mentions_company(domain_text: str) -> bool:
@@ -209,8 +185,9 @@ def analyze_company(env, nodes: list[dict], edges: list[dict], modules: list[str
     # -- rules, C2 (no company-referencing rule at all) and C3 --
     rules_plain: list[dict] = []
     all_scoped_entries = {m['model']: m for m in company_models}
+    rules_map = rules_by_model(env, sorted(scoped_ids))
     for model_name in sorted(scoped_ids):
-        rules = _rules_for_model(env, model_name)
+        rules = rules_map.get(model_name, [])
         rules_plain.extend(rules)
         entry = all_scoped_entries.get(model_name)
         if entry is not None:

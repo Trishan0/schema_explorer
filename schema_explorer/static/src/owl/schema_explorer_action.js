@@ -37,10 +37,11 @@ export class SchemaExplorerAction extends Component {
             selectedNodeId: null,
             hiddenNodeIds: new Set(),
             showLegend: false,
-            // 'erd' | 'company' | 'physical' (PLAN.md, section 9.3). Only
-            // 'physical' changes what is *fetched* (row counts, sizes, the
-            // drift report); 'company' is a pure style overlay on data the
-            // graph already carries.
+            records: null,
+            // 'erd' | 'company' | 'security' | 'lifecycle' | 'physical'
+            // (PLAN.md, section 9.3). Only 'physical' changes what is
+            // *fetched* (row counts, sizes, the drift report); the others
+            // are pure style overlays on data the graph already carries.
             view: 'erd',
         });
 
@@ -190,6 +191,8 @@ export class SchemaExplorerAction extends Component {
         return [
             { id: 'erd', label: 'ERD' },
             { id: 'company', label: 'Company' },
+            { id: 'security', label: 'Security' },
+            { id: 'lifecycle', label: 'Lifecycle' },
             { id: 'physical', label: 'Physical' },
         ];
     }
@@ -288,6 +291,58 @@ export class SchemaExplorerAction extends Component {
             total: drift.length,
             items: drift,
         };
+    }
+
+    /** Access matrix + rules + field-level restrictions for the selected
+     * node (PLAN.md, section 9.5 point 5). */
+    get selectedNodeSecurity() {
+        const node = this.selectedNode;
+        const security = this.state.graph && this.state.graph.security;
+        if (!node || !security) {
+            return null;
+        }
+        return {
+            access: security.access[node.id] || [],
+            hasNoAccess: security.models_without_access.includes(node.id),
+            rules: security.rules[node.id] || [],
+            fieldGroups: security.field_groups.filter((fg) => fg.model === node.id),
+        };
+    }
+
+    /** State/stage field values + best-effort transition guesses for the
+     * selected node (PLAN.md, section 9.5 point 6 / section 8.4). */
+    get selectedNodeLifecycle() {
+        const node = this.selectedNode;
+        const lifecycle = this.state.graph && this.state.graph.lifecycle;
+        if (!node || !lifecycle) {
+            return null;
+        }
+        return lifecycle.models.find((m) => m.model === node.id) || null;
+    }
+
+    // -- records panel (PLAN.md, section 9.5 point 8) ----------------------
+
+    async loadSampleRecords() {
+        const node = this.selectedNode;
+        if (!node) {
+            return;
+        }
+        this.state.records = { loading: true, error: null, data: null, forModel: node.id };
+        try {
+            const result = await this.orm.call("schema.explorer.service", "get_sample_records", [node.id]);
+            this.state.records = { loading: false, error: null, data: result, forModel: node.id };
+        } catch (error) {
+            const message = (error && error.data && error.data.message) || String(error);
+            this.state.records = { loading: false, error: message, data: null, forModel: node.id };
+        }
+    }
+
+    get sampleRecords() {
+        const node = this.selectedNode;
+        if (!node || !this.state.records || this.state.records.forModel !== node.id) {
+            return null;
+        }
+        return this.state.records;
     }
 
     focusNode(nodeId) {

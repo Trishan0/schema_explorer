@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Schema Explorer',
-    'version': '19.0.3.0.0',
+    'version': '19.0.4.0.0',
     'category': 'Technical',
     'summary': 'Module-scoped database and ORM schema visualizer for developers and demos',
     'description': """
@@ -29,6 +29,14 @@ Physical view (row counts, sizes, indexes, constraints, and a drift report
 comparing what the code expects against what is actually in the database -
 gated behind a stricter access group, since row counts on a client database
 can themselves be sensitive).
+
+Phase 3 adds a Security view (the access-control matrix per model, record
+rules in plain English, group hierarchy, and field-level restrictions) and
+a Lifecycle view (state/stage fields with their values and a best-effort,
+clearly-labelled guess at transitions from the model's own source code), as
+well as a "Records" panel showing a handful of real rows through the ORM -
+your own access rights and record rules apply exactly as they would
+anywhere else in Odoo, since this never uses ``sudo()``.
 
 Phase 0's portable core pipeline (``core/``) and shell export script are
 unchanged and still run with no server at all. See ``PLAN.md`` in the
