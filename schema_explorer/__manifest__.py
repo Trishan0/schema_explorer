@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Schema Explorer',
-    'version': '19.0.4.0.0',
+    'version': '19.0.5.0.0',
     'category': 'Technical',
     'summary': 'Module-scoped database and ORM schema visualizer for developers and demos',
     'description': """
@@ -38,6 +38,15 @@ well as a "Records" panel showing a handful of real rows through the ORM -
 your own access rights and record rules apply exactly as they would
 anywhere else in Odoo, since this never uses ``sudo()``.
 
+Phase 4 adds saved diagrams (module scope, view, manual node layout) and
+presentation stories built on top of them - an ordered walkthrough with
+narration, camera moves and highlighted nodes/edges, playable in-app or
+from a fully offline export. It also rounds out the exporters: DBML (for
+dbdiagram.io), a Markdown report, PNG/SVG snapshots of the canvas, and a
+standalone HTML file that inlines the graph, the vendored rendering
+libraries and any stories into one file that opens with no server and no
+network at all - the client-demo story this module was built for.
+
 Phase 0's portable core pipeline (``core/``) and shell export script are
 unchanged and still run with no server at all. See ``PLAN.md`` in the
 repository root for the full roadmap.
@@ -47,8 +56,11 @@ repository root for the full roadmap.
     'depends': ['base', 'web'],
     'data': [
         'security/schema_explorer_groups.xml',
+        'security/ir.model.access.csv',
+        'security/schema_explorer_rules.xml',
         'views/schema_explorer_action.xml',
         'views/ir_module_module_views.xml',
+        'views/schema_explorer_diagram_views.xml',
         'views/menus.xml',
     ],
     'assets': {
