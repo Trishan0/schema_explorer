@@ -86,7 +86,8 @@ Measured on 2026-09-17 from source and from `odoo_hsapp4`.
 | Metric | Value | Source |
 |---|---|---|
 | Tables in whole DB | **320** | `pg_tables` |
-| Models owned | **54** | `ir_model_data` (`module='patient_safety'`, `model='ir.model'`) |
+| Models `ir.model.data` lists for the module | 54 | `ir_model_data` (`module='patient_safety'`, `model='ir.model'`) |
+| Models actually **owned** (defined by the module) | **45** | see note below |
 | M2M join tables owned | **13** | `ir_model_relation` |
 | DB constraints owned | **192** | `ir_model_constraint` (FK + unique + check) |
 | Relational fields | 73 m2o / 17 o2m / 15 m2m | source grep |
@@ -108,7 +109,9 @@ Measured on 2026-09-17 from source and from `odoo_hsapp4`.
 | **Hook** `_backfill_incident_company` (post-init / post-migrate) | `hooks.py` | Detect and note as "data migration touches `company_id`" (informational only). |
 | **External relation targets** | — | `res.users` (16), `res.company` (13), `ir.attachment` (3), `res.partner`, `hr.employee` | These become boundary nodes. |
 
-**Cross-database note:** other local databases with the module installed have 53–61 `patient%` tables and 54–57 owned models. The cause is **module version differences** (one DB is "to upgrade"), not leftover tables. This motivates the database-compare idea in section 20.
+**Cross-database note:** other local databases with the module installed have 53–61 `patient%` tables and a similar spread in what `ir.model.data` lists. The cause is **module version differences** (one DB is "to upgrade"), not leftover tables. This motivates the database-compare idea in section 20.
+
+**Found while building Phase 0 (worth keeping in mind - it generalizes beyond this module):** `ir.model.data` (`model='ir.model'`) is **not** an ownership record - Odoo writes a `<module>.model_<table>` xmlid for *every* module that contributes a class to a model, including a pure extension. Of the 54 models it lists for `patient_safety`, 4 (`res.company`, `res.users`, `res.groups`, `res.partner`) are models the module only extends, plus 2 abstract mixins and 3 wizards - leaving 45 it actually defines. True ownership has to come from the registry: the one contributing class whose own `__dict__` sets `_name = '...'` directly (an extending class only sets `_inherit`, inheriting `_name`). See `core/registry_reader.find_defining_module` and section 18, risk R17.
 
 ## 5. Architecture
 
@@ -697,7 +700,7 @@ A `post_install` test tagged `schema_explorer_reference`, **skipped unless `pati
 
 | Assertion | Expected (hsapp4, 19.0.3.2.0) |
 |---|---|
-| owned models | 54 |
+| owned models (defined by the module, not merely touched - section 4) | 45 |
 | junction tables | 13 |
 | `inherits` edges to `patient.safety.incident` | 9 |
 | `patient.safety.workflow.mixin` in `abstract_models`, not in `nodes` | ✓ |
@@ -849,6 +852,7 @@ Phases 2 and 3 are independent and can run in parallel.
 | R14 | EPL-2.0 (elkjs) with LGPL-3 distribution | Default to MIT dagre; ELK only after license review (Q2) |
 | R15 | `sudo()` in the service leaks metadata to low-privilege users | Group check **before** any `sudo()`; test in `test_access` |
 | R16 | Standalone HTML leaks sensitive info in a client demo | `anonymize` default on, no record data ever, export test in Phase 4 |
+| R17 | `ir.model.data` (`model='ir.model'`) is written by every module that *touches* a model, not just the one that defines it - naively treating it as ownership misclassifies every extended core model as "owned" (found while building Phase 0; see section 4) | True ownership resolved from the registry (the one contributing class whose own `__dict__` sets `_name`), not from `ir.model.data` alone - `core/registry_reader.find_defining_module` |
 
 ## 19. Open questions
 
