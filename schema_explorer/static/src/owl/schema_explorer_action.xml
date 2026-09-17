@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="schema_explorer.Action">
+        <div class="o_schema_explorer">
+            <div class="se-toolbar">
+                <div class="se-module-picker">
+                    <div class="se-module-chips">
+                        <t t-foreach="state.selectedModules" t-as="mod" t-key="mod.name">
+                            <span class="badge text-bg-primary se-module-chip">
+                                <t t-esc="mod.label"/>
+                                <a href="#" class="se-chip-remove" t-on-click.prevent="() => this.removeModule(mod.name)">&#215;</a>
+                            </span>
+                        </t>
+                        <input type="text"
+                               class="se-module-search form-control form-control-sm"
+                               placeholder="Add a module…"
+                               t-att-value="state.moduleSearchTerm"
+                               t-on-input="onModuleSearchInput"/>
+                    </div>
+                    <div class="se-module-results list-group" t-if="state.moduleSearchResults.length">
+                        <a href="#" class="list-group-item list-group-item-action"
+                           t-foreach="state.moduleSearchResults" t-as="mod" t-key="mod.name"
+                           t-on-click.prevent="() => this.addModule(mod)">
+                            <strong t-esc="mod.name"/> <span class="text-muted" t-esc="mod.label"/>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="se-depth-control btn-group btn-group-sm" role="group">
+                    <t t-foreach="depthChoices" t-as="d" t-key="d">
+                        <button type="button"
+                                t-att-class="'btn ' + (state.depth === d ? 'btn-primary' : 'btn-outline-secondary')"
+                                t-on-click="() => this.setDepth(d)">
+                            Depth <t t-esc="d"/>
+                        </button>
+                    </t>
+                </div>
+
+                <div class="se-toggles form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="se_toggle_wizards"
+                           t-att-checked="state.includeWizards" t-on-change="toggleWizards"/>
+                    <label class="form-check-label" for="se_toggle_wizards">Wizards</label>
+                </div>
+                <div class="se-toggles form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="se_toggle_technical"
+                           t-att-checked="state.includeTechnicalFields" t-on-change="toggleTechnicalFields"/>
+                    <label class="form-check-label" for="se_toggle_technical">Technical fields</label>
+                </div>
+
+                <input type="text" class="se-canvas-search form-control form-control-sm"
+                       placeholder="Search…" t-att-value="state.canvasSearchTerm"
+                       t-on-input="onCanvasSearchInput"/>
+
+                <button type="button" class="btn btn-sm btn-outline-secondary" t-on-click="onFit">Fit</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" t-on-click="toggleLegend">Legend</button>
+            </div>
+
+            <div class="se-body">
+                <div class="se-sidebar">
+                    <div class="alert alert-info m-2" t-if="!state.graph &amp;&amp; !state.loading">
+                        Add a module above to see its schema.
+                    </div>
+                    <t t-foreach="['owned', 'extended', 'boundary', 'wizard', 'view']" t-as="kind" t-key="kind">
+                        <t t-set="nodes" t-value="nodesByKind[kind]"/>
+                        <div class="se-sidebar-group" t-if="nodes.length">
+                            <div class="se-sidebar-group-title" t-esc="kind + ' (' + nodes.length + ')'"/>
+                            <div class="se-sidebar-item"
+                                 t-foreach="nodes" t-as="node" t-key="node.id"
+                                 t-att-class="state.selectedNodeId === node.id ? 'active' : ''"
+                                 t-on-click="() => this.focusNode(node.id)">
+                                <t t-esc="node.label"/>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+
+                <div class="se-canvas-wrap">
+                    <div class="se-canvas" t-ref="canvas"/>
+                    <div class="se-loading-overlay" t-if="state.loading">Loading…</div>
+                    <div class="se-error-overlay alert alert-danger" t-if="state.error" t-esc="state.error"/>
+                </div>
+
+                <div class="se-inspector">
+                    <t t-if="selectedNode" t-set="node" t-value="selectedNode">
+                        <h5 t-esc="node.label"/>
+                        <div class="text-muted small" t-esc="node.id"/>
+                        <div class="se-inspector-badges">
+                            <span t-att-class="'badge se-kind-badge se-kind-' + node.kind" t-esc="node.kind"/>
+                            <span class="badge text-bg-light" t-if="node.module" t-esc="'module: ' + node.module"/>
+                        </div>
+                        <div class="se-inspector-actions mt-2">
+                            <button class="btn btn-sm btn-outline-secondary" t-on-click="hideSelectedNode">Hide</button>
+                            <button class="btn btn-sm btn-outline-secondary" t-if="node.kind === 'boundary' &amp;&amp; state.depth &lt; 2"
+                                    t-on-click="expandOneMoreHop">Expand (+1 depth)</button>
+                        </div>
+
+                        <div class="se-inspector-section" t-if="node.mixins.length">
+                            <h6>Mixins</h6>
+                            <ul class="list-unstyled">
+                                <li t-foreach="node.mixins" t-as="mixin" t-key="mixin">
+                                    <strong t-esc="mixin"/>
+                                    <div class="text-muted small" t-if="mixinDescription(mixin)" t-esc="mixinDescription(mixin)"/>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="se-inspector-section" t-if="Object.keys(node.inherits).length">
+                            <h6>Delegates to (_inherits)</h6>
+                            <ul class="list-unstyled">
+                                <li t-foreach="Object.entries(node.inherits)" t-as="entry" t-key="entry[0]">
+                                    <t t-esc="entry[1]"/> &#8594; <a href="#" t-on-click.prevent="() => this.focusNode(entry[0])" t-esc="entry[0]"/>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="se-inspector-section">
+                            <h6>Fields (<t t-esc="node.fields.length"/>)</h6>
+                            <table class="table table-sm se-fields-table">
+                                <thead>
+                                    <tr><th>Name</th><th>Type</th><th>Origin</th><th>Target</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="node.fields" t-as="field" t-key="field.name"
+                                        t-att-class="field.origin === 'inherits' ? 'se-field-inherited' : ''">
+                                        <td>
+                                            <t t-esc="field.name"/>
+                                            <span class="text-danger" t-if="field.required">*</span>
+                                        </td>
+                                        <td t-esc="field.type"/>
+                                        <td>
+                                            <span t-att-class="'se-origin se-origin-' + field.origin" t-esc="field.origin"/>
+                                            <div class="text-muted small" t-if="field.stored_on">stored on <t t-esc="field.stored_on"/></div>
+                                        </td>
+                                        <td>
+                                            <a href="#" t-if="field.target" t-on-click.prevent="() => this.focusNode(field.target)" t-esc="field.target"/>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="se-inspector-section" t-if="node.source.length">
+                            <h6>Source</h6>
+                            <ul class="list-unstyled small">
+                                <li t-foreach="node.source" t-as="src" t-key="src.class">
+                                    <t t-esc="src.module"/>/<t t-esc="src.file"/> (<t t-esc="src.class"/>)
+                                </li>
+                            </ul>
+                        </div>
+                    </t>
+                    <div class="text-muted p-3" t-else="">Select a node to inspect it.</div>
+                </div>
+            </div>
+
+            <div class="se-statusbar" t-esc="statusText"/>
+
+            <div class="se-legend-panel" t-if="state.showLegend">
+                <h6>Table styles</h6>
+                <div class="se-legend-item" t-foreach="legendNodeKinds" t-as="item" t-key="item.kind">
+                    <span t-att-class="'se-legend-swatch se-node-' + item.kind"/>
+                    <strong t-esc="item.title"/> — <span t-esc="item.description"/>
+                </div>
+                <h6 class="mt-2">Line styles</h6>
+                <div class="se-legend-item" t-foreach="legendEdgeKinds" t-as="item" t-key="item.kind">
+                    <span t-att-class="'se-legend-line se-edge-' + item.kind"/>
+                    <strong t-esc="item.title"/> — <span t-esc="item.description"/>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

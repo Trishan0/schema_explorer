@@ -9,4 +9,5 @@ from . import (
     test_mermaid,
     test_inspector_base,
     test_patient_safety_acceptance,
+    test_service,
 )
