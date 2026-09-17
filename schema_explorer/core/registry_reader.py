@@ -154,6 +154,9 @@ def describe_field(model, field_name: str) -> dict:
         'computed': bool(getattr(f, 'compute', None)) and not getattr(f, 'related', None),
         'company_dependent': bool(getattr(f, 'company_dependent', False)),
         'check_company': bool(getattr(f, 'check_company', False)),
+        # csv of group xmlids restricting who even sees this field
+        # (PLAN.md, section 8.3, "field groups").
+        'groups': [g.strip() for g in (getattr(f, 'groups', None) or '').split(',') if g.strip()],
         'inherited': bool(getattr(f, 'inherited', False)),
         'inherited_from': None,
         'target': None,
@@ -179,6 +182,16 @@ def describe_field(model, field_name: str) -> dict:
         info['relation_table'] = getattr(f, 'relation', None)
         info['column1'] = getattr(f, 'column1', None)
         info['column2'] = getattr(f, 'column2', None)
+    elif f.type == 'selection':
+        # `_description_selection` is the same call Odoo itself uses to
+        # render a Selection widget - it resolves a static list, a method
+        # name, or a callable uniformly. It runs the field's own declared
+        # selection-provider method (no records involved), which is safe
+        # and expected, unlike evaluating a domain against real data.
+        try:
+            info['selection'] = list(f._description_selection(model.env))
+        except Exception:  # noqa: BLE001 - a selection provider can do anything
+            info['selection'] = []
 
     return info
 

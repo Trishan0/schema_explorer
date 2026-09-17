@@ -94,7 +94,7 @@ export function createRenderer(container, handlers = {}) {
     function applyViewMode(mode, graph) {
         currentViewMode = mode;
         cy.batch(() => {
-            cy.nodes().removeClass("se-company-scoped se-company-global se-has-drift");
+            cy.nodes().removeClass("se-company-scoped se-company-global se-has-drift se-no-acl se-has-lifecycle");
             if (mode === "company" && graph.company) {
                 const scoped = new Set([
                     ...graph.company.company_models.map((m) => m.model),
@@ -113,6 +113,20 @@ export function createRenderer(container, handlers = {}) {
                 cy.nodes().forEach((n) => {
                     if (driftModels.has(n.id())) {
                         n.addClass("se-has-drift");
+                    }
+                });
+            } else if (mode === "security" && graph.security) {
+                const noAcl = new Set(graph.security.models_without_access);
+                cy.nodes().forEach((n) => {
+                    if (noAcl.has(n.id())) {
+                        n.addClass("se-no-acl");
+                    }
+                });
+            } else if (mode === "lifecycle" && graph.lifecycle) {
+                const withLifecycle = new Set(graph.lifecycle.models.map((m) => m.model));
+                cy.nodes().forEach((n) => {
+                    if (withLifecycle.has(n.id())) {
+                        n.addClass("se-has-lifecycle");
                     }
                 });
             }

@@ -14,4 +14,6 @@ from . import (
     test_company,
     test_pg_catalog,
     test_drift,
+    test_security,
+    test_lifecycle,
 )

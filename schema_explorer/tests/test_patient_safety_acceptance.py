@@ -132,3 +132,51 @@ class TestPatientSafetyAcceptance(TransactionCase):
         hooks_file = next((h for h in hooks if h['file'] == 'hooks.py'), None)
         self.assertIsNotNone(hooks_file)
         self.assertIn('_backfill_incident_company', hooks_file['functions'])
+
+    def test_acl_matrix_matches_ir_model_access_directly(self):
+        # PLAN.md, section 17, phase 3 exit criteria: "ACL matrix for
+        # patient_safety matches security/ir.model.access.csv" - checked
+        # against the database those rows were loaded into, model by model,
+        # rather than re-parsing the CSV file (which the graph never reads
+        # either).
+        owned_models = [n['id'] for n in self.graph['nodes'] if n['kind'] == 'owned']
+        for model_name in owned_models:
+            rows = self.graph['security']['access'].get(model_name, [])
+            expected = self.env['ir.model.access'].search_count([('model_id.model', '=', model_name)])
+            self.assertEqual(len(rows), expected, model_name)
+
+    def test_incident_access_matrix(self):
+        rows = {r['group_label']: r for r in self.graph['security']['access']['patient.safety.incident']}
+        self.assertIn('Incidents: Own incidents', rows)
+        self.assertIn('Incidents: All incidents', rows)
+        self.assertFalse(rows['Incidents: Own incidents']['unlink'])
+
+    def test_all_rules_have_english_or_a_safe_fallback(self):
+        # PLAN.md, section 17, phase 3 exit criteria: "all 48 rules listed
+        # with English or a raw fallback. Zero crashes on any domain."
+        all_rules = [r for rules in self.graph['security']['rules'].values() for r in rules]
+        self.assertGreater(len(all_rules), 0)
+        for rule in all_rules:
+            self.assertTrue(rule['english'] or rule['domain'])
+
+    def test_lifecycle_finds_the_incident_state_machine(self):
+        incident_entry = next(
+            (m for m in self.graph['lifecycle']['models'] if m['model'] == 'patient.safety.incident'), None,
+        )
+        self.assertIsNotNone(incident_entry)
+        state_field = next(f for f in incident_entry['fields'] if f['field'] == 'state')
+        self.assertGreater(len(state_field['values']), 3)
+        self.assertGreater(len(state_field['transitions_guess']), 3)
+
+    def test_lifecycle_transitions_found_for_delegated_incident_types(self):
+        # PLAN.md section 8.4: a delegated incident type's `state` field has
+        # no code of its own - the transitions live in the parent
+        # (patient.safety.incident)'s source, found and fixed while
+        # building this phase.
+        entry = next(
+            (m for m in self.graph['lifecycle']['models']
+             if m['model'] == 'patient.safety.adverse.drug.reaction'), None,
+        )
+        self.assertIsNotNone(entry)
+        state_field = next(f for f in entry['fields'] if f['field'] == 'state')
+        self.assertGreater(len(state_field['transitions_guess']), 0)

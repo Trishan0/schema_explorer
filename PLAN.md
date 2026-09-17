@@ -799,6 +799,12 @@ After those three fixes, the same run against `odoo_hsapp4` finds exactly **one 
 - ACL matrix for `patient_safety` matches `security/ir.model.access.csv`.
 - All 48 rules listed with English or a raw fallback. **Zero crashes on any domain.**
 
+**Done (2026-09-17).** Both analyzers are batched the same way as `company.py` - a handful of queries regardless of node count, not one per model. `analyzers/rules.py` was split out of `company.py` so the English-domain rule lookup (and its batched xmlid resolution) is shared by both the company and security analyzers instead of duplicated.
+
+Verified against `odoo_hsapp4`/`patient_safety`: every owned model's ACL row count matches `ir.model.access` directly (54 rows across the module's models, none missing); all 56 `ir.rule` records found across the 49-node graph render either an English summary or fall back to the raw domain, with zero exceptions. 16 models were found to have a lifecycle-shaped Selection field.
+
+One real gap, fixed rather than left as a known limitation: the lifecycle analyzer's regex scan only looked at a node's **own** source file, which found nothing for the 9 delegated incident types - their `state` field is borrowed through `_inherits`, so the `write({'state': ...})` calls that actually move it live in `patient_safety_incident.py` (the delegate parent), not in the child's own file. Fixed by also scanning the `_inherits` parent's source when a lifecycle field's `origin` is `'inherits'` - `patient.safety.adverse.drug.reaction.state` went from 0 guessed transitions to 8 of its 10 declared values.
+
 ### Phase 4: Exports + Presentation
 
 | Task |
