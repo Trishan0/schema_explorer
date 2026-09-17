@@ -84,6 +84,27 @@ export function buildStylesheet() {
         },
     );
 
+    // -- Company view (PLAN.md, section 9.3) - overlaid on top of the kind
+    // colours above (a thicker solid border = company-scoped, a grey
+    // dashed one = shared/global data), not a replacement for them.
+    rules.push(
+        {
+            selector: "node.se-company-scoped",
+            style: { "border-width": 5, "border-color": "#2f855a" },
+        },
+        {
+            selector: "node.se-company-global",
+            style: { "border-color": "#a0aec0", "border-style": "dashed" },
+        },
+    );
+
+    // -- Physical view: nodes with at least one drift finding get a hard
+    // red outline regardless of their kind colour, so they stand out.
+    rules.push({
+        selector: "node.se-has-drift",
+        style: { "border-color": "#c53030", "border-width": 4, "border-style": "solid" },
+    });
+
     rules.push({
         selector: "edge.se-edge",
         style: {

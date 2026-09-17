@@ -10,4 +10,8 @@ from . import (
     test_inspector_base,
     test_patient_safety_acceptance,
     test_service,
+    test_domain_english,
+    test_company,
+    test_pg_catalog,
+    test_drift,
 )

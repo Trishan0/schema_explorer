@@ -141,6 +141,13 @@ def describe_field(model, field_name: str) -> dict:
         'label': f.string or field_name,
         'help': f.help or None,
         'store': bool(f.store),
+        # `store=True` is not the same as "has a database column" - a
+        # Binary field defaults to `attachment=True` (stored as
+        # ir.attachment, not a column) while still being `store=True`.
+        # `column_type` is None whenever there is genuinely no column
+        # (Odoo's own drift/init logic uses exactly this check - see
+        # odoo/orm/fields.py, e.g. line ~503).
+        'has_column': bool(f.store and getattr(f, 'column_type', None)),
         'required': bool(getattr(f, 'required', False)),
         'index': bool(getattr(f, 'index', False)),
         'related': f.related if getattr(f, 'related', None) else None,

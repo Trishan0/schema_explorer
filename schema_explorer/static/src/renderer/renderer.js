@@ -33,6 +33,7 @@ export function createRenderer(container, handlers = {}) {
     });
 
     let selectedNodeId = null;
+    let currentViewMode = "erd";
 
     cy.on("tap", "node", (evt) => {
         const id = evt.target.id();
@@ -80,6 +81,42 @@ export function createRenderer(container, handlers = {}) {
         } else {
             selectedNodeId = null;
         }
+        if (currentViewMode) {
+            applyViewMode(currentViewMode, graph);
+        }
+    }
+
+    /**
+     * Style-only overlay for the Company/Physical views (PLAN.md, section
+     * 9.3) - these never re-fetch or re-layout, just toggle classes on the
+     * nodes already on the canvas.
+     */
+    function applyViewMode(mode, graph) {
+        currentViewMode = mode;
+        cy.batch(() => {
+            cy.nodes().removeClass("se-company-scoped se-company-global se-has-drift");
+            if (mode === "company" && graph.company) {
+                const scoped = new Set([
+                    ...graph.company.company_models.map((m) => m.model),
+                    ...graph.company.inherits_company.map((m) => m.model),
+                ]);
+                const global = new Set(graph.company.global_models);
+                cy.nodes().forEach((n) => {
+                    if (scoped.has(n.id())) {
+                        n.addClass("se-company-scoped");
+                    } else if (global.has(n.id())) {
+                        n.addClass("se-company-global");
+                    }
+                });
+            } else if (mode === "physical" && graph.drift) {
+                const driftModels = new Set(graph.drift.map((d) => d.model).filter(Boolean));
+                cy.nodes().forEach((n) => {
+                    if (driftModels.has(n.id())) {
+                        n.addClass("se-has-drift");
+                    }
+                });
+            }
+        });
     }
 
     function runLayout() {
@@ -142,5 +179,5 @@ export function createRenderer(container, handlers = {}) {
         cy.destroy();
     }
 
-    return { cy, mount, fit, focus, search, selectNode, clearSelection, destroy };
+    return { cy, mount, fit, focus, search, selectNode, clearSelection, applyViewMode, destroy };
 }
